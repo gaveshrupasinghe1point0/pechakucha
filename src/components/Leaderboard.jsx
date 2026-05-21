@@ -1,6 +1,9 @@
 import { Trophy } from 'lucide-react';
+import { rankCompetitors } from '../lib/competitors';
 
 export default function Leaderboard({ competitors = [], highlightId }) {
+  const rankedCompetitors = rankCompetitors(competitors);
+
   return (
     <div className="glass-card overflow-hidden">
       <div className="flex items-center justify-between border-b border-slate-200/70 p-5 dark:border-white/10">
@@ -8,13 +11,13 @@ export default function Leaderboard({ competitors = [], highlightId }) {
           <p className="text-sm font-semibold uppercase tracking-[0.25em] text-brand-600 dark:text-brand-100">
             Live Leaderboard
           </p>
-          <h2 className="mt-1 text-2xl font-black">Competition Order Live Scores</h2>
+          <h2 className="mt-1 text-2xl font-black">Live Rankings by Score</h2>
         </div>
         <Trophy className="text-amber-500" />
       </div>
 
       <div className="divide-y divide-slate-200/70 dark:divide-white/10">
-        {competitors.map((competitor, index) => (
+        {rankedCompetitors.map((competitor, index) => (
           <div
             key={competitor.id}
             className={`grid gap-4 p-5 transition md:grid-cols-[4rem_1fr_8rem_8rem] md:items-center ${
