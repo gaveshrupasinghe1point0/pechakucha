@@ -4,14 +4,16 @@ import Leaderboard from '../components/Leaderboard';
 import StatCard from '../components/StatCard';
 import { useAuth } from '../hooks/useAuth';
 import { useCompetitors } from '../hooks/useCompetitors';
+import { rankCompetitors } from '../lib/competitors';
 
 export default function CompetitorDashboard() {
   const { profile } = useAuth();
   const { competitors, activeCompetitor } = useCompetitors();
+  const rankedCompetitors = rankCompetitors(competitors);
   const competitor = competitors.find(
     (item) => item.profile_id === profile.id || (profile.student_id && item.student_id === profile.student_id),
   );
-  const rank = competitor ? competitors.findIndex((item) => item.id === competitor.id) + 1 : null;
+  const rank = competitor ? rankedCompetitors.findIndex((item) => item.id === competitor.id) + 1 : null;
 
   return (
     <PageShell>
