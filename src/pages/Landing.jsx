@@ -46,10 +46,10 @@ export default function Landing() {
             <div className="flex gap-4">
               {activeCompetitor && (
                 <img
-                  className="h-20 w-20 rounded-3xl object-cover ring-1 ring-slate-200 dark:ring-white/10"
+                  className="h-36 w-36 rounded-3xl object-cover ring-2 ring-slate-200 dark:ring-white/10 sm:h-44 sm:w-44"
                   src={
                     activeCompetitor.profile_image_url ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(activeCompetitor.full_name)}&background=16a34a&color=fff`
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(activeCompetitor.full_name)}&background=16a34a&color=fff&size=512`
                   }
                   alt={activeCompetitor.full_name}
                 />
