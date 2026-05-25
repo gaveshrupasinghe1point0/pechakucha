@@ -2,11 +2,13 @@ import { Link } from 'react-router-dom';
 import {
   Activity,
   Clock,
+  Flag,
   GraduationCap,
   ImagePlus,
   PlusCircle,
   RadioTower,
   Trash2,
+  Trophy,
   Users,
   Vote,
 } from 'lucide-react';
@@ -35,6 +37,7 @@ export default function AdminDashboard() {
   const [duration, setDuration] = useState(() => splitDuration(status.voting_duration_seconds ?? 30));
   const [savingId, setSavingId] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [endingCompetition, setEndingCompetition] = useState(false);
   const [competitorForm, setCompetitorForm] = useState({
     competitorCode: '',
     studentId: '',
@@ -98,6 +101,59 @@ export default function AdminDashboard() {
 
     toast.success('Competitor removed.');
     reload();
+  }
+
+  function winnersColumnError(error) {
+    if (error?.message?.includes('winners_page_enabled')) {
+      toast.error('Run supabase/winners-page.sql in Supabase SQL Editor, then try again.');
+      return true;
+    }
+    return false;
+  }
+
+  async function endCompetition() {
+    const confirmed = window.confirm(
+      'End the competition? Voting will close and every user will automatically be taken to the winners podium.',
+    );
+    if (!confirmed) return;
+
+    setEndingCompetition(true);
+
+    await supabase.from('competitors').update({ is_active: false }).eq('is_active', true);
+
+    const { error } = await supabase
+      .from('competition_status')
+      .update({
+        voting_open: false,
+        active_competitor_id: null,
+        winners_page_enabled: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', 1);
+
+    setEndingCompetition(false);
+
+    if (error) {
+      if (!winnersColumnError(error)) toast.error(error.message);
+      return;
+    }
+
+    toast.success('Competition ended. Winners are now live for everyone.');
+    reload();
+  }
+
+  async function hideWinnersPage() {
+    const { error } = await supabase
+      .from('competition_status')
+      .update({ winners_page_enabled: false, updated_at: new Date().toISOString() })
+      .eq('id', 1);
+
+    if (error) {
+      if (!winnersColumnError(error)) toast.error(error.message);
+      return;
+    }
+
+    toast.success('Winners page hidden.');
   }
 
   async function updateDuration() {
@@ -189,6 +245,26 @@ export default function AdminDashboard() {
             <Vote size={18} />
             Vote
           </Link>
+          {status.winners_page_enabled ? (
+            <>
+              <Link className="btn-primary" to="/winners">
+                <Trophy size={18} />
+                View winners
+              </Link>
+              <button className="btn-secondary" onClick={hideWinnersPage}>
+                Hide winners page
+              </button>
+            </>
+          ) : (
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 font-semibold text-white shadow-lg shadow-rose-600/25 transition hover:-translate-y-0.5 hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={endingCompetition}
+              onClick={endCompetition}
+            >
+              <Flag size={18} />
+              {endingCompetition ? 'Ending...' : 'End competition'}
+            </button>
+          )}
           <CountdownBadge open={status.voting_open} endDate={votingEndsAt} />
         </div>
       </div>
@@ -197,7 +273,7 @@ export default function AdminDashboard() {
         <StatCard label="Online users" value={onlineCount} icon={Users} tone="emerald" />
         <StatCard label="Total votes" value={totalVotes} icon={Vote} />
         <StatCard label="Active speaker" value={activeCompetitor ? '1' : '0'} icon={RadioTower} tone="amber" />
-        <StatCard label="Status" value={status.voting_open ? 'Open' : 'Closed'} icon={Activity} />
+        <StatCard label="Status" value={status.winners_page_enabled ? 'Finished' : status.voting_open ? 'Open' : 'Closed'} icon={Activity} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -322,7 +398,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex min-w-0 items-center gap-3">
                     <img
-                      className="h-12 w-12 rounded-2xl object-cover ring-1 ring-slate-200 dark:ring-white/10"
+                      className="h-20 w-20 rounded-3xl object-cover ring-2 ring-slate-200 dark:ring-white/10"
                       src={competitor.profile_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(competitor.full_name)}&background=16a34a&color=fff`}
                       alt={competitor.full_name}
                     />
@@ -371,10 +447,20 @@ export default function AdminDashboard() {
             ))}
           </div>
 
-          <div className="p-5">
+          <div className="grid gap-3 p-5 sm:grid-cols-2">
             <button className="btn-secondary w-full" onClick={closeVoting}>
-              Close voting
+              Close voting only
             </button>
+            {!status.winners_page_enabled && (
+              <button
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 font-semibold text-white shadow-lg shadow-rose-600/25 transition hover:-translate-y-0.5 hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={endingCompetition}
+                onClick={endCompetition}
+              >
+                <Flag size={18} />
+                {endingCompetition ? 'Ending competition...' : 'End competition & show winners'}
+              </button>
+            )}
           </div>
           </section>
         </div>
