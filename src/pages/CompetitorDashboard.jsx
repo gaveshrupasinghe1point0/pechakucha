@@ -42,10 +42,10 @@ export default function CompetitorDashboard() {
           <section className="glass-card mb-6 p-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
               <img
-                className="h-28 w-28 rounded-3xl object-cover ring-1 ring-slate-200 dark:ring-white/10"
+                className="h-40 w-40 rounded-3xl object-cover ring-2 ring-slate-200 dark:ring-white/10 sm:h-48 sm:w-48"
                 src={
                   competitor.profile_image_url ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(competitor.full_name)}&background=16a34a&color=fff`
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(competitor.full_name)}&background=16a34a&color=fff&size=512`
                 }
                 alt={competitor.full_name}
               />
