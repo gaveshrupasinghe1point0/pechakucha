@@ -1,5 +1,6 @@
 import { Trophy } from 'lucide-react';
 import { rankCompetitors } from '../lib/competitors';
+import { competitorAvatarUrl } from '../lib/competitorAvatar';
 
 export default function Leaderboard({ competitors = [], highlightId }) {
   const rankedCompetitors = rankCompetitors(competitors);
@@ -25,13 +26,10 @@ export default function Leaderboard({ competitors = [], highlightId }) {
             }`}
           >
             <div className="text-3xl font-black text-slate-400">#{index + 1}</div>
-            <div className="flex items-start gap-3">
+            <div className="flex items-center gap-5">
               <img
-                className="h-14 w-14 rounded-2xl object-cover ring-1 ring-slate-200 dark:ring-white/10"
-                src={
-                  competitor.profile_image_url ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(competitor.full_name)}&background=16a34a&color=fff`
-                }
+                className="h-32 w-32 shrink-0 rounded-3xl object-cover ring-2 ring-slate-200 dark:ring-white/10 md:h-40 md:w-40"
+                src={competitorAvatarUrl(competitor, 512)}
                 alt={competitor.full_name}
               />
               <div>
