@@ -74,33 +74,36 @@ export default function StudentDashboard() {
 
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <section className="glass-card p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex gap-4">
-              {activeCompetitor && (
-                <img
-                  className="h-20 w-20 rounded-3xl object-cover ring-1 ring-slate-200 dark:ring-white/10"
-                  src={
-                    activeCompetitor.profile_image_url ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(activeCompetitor.full_name)}&background=16a34a&color=fff`
-                  }
-                  alt={activeCompetitor.full_name}
-                />
-              )}
-              <div>
+          {activeCompetitor ? (
+            <div className="flex flex-col items-center text-center">
+              <img
+                className="h-44 w-44 rounded-3xl object-cover ring-4 ring-emerald-500/30 sm:h-52 sm:w-52"
+                src={
+                  activeCompetitor.profile_image_url ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(activeCompetitor.full_name)}&background=16a34a&color=fff&size=512`
+                }
+                alt={activeCompetitor.full_name}
+              />
+              <p className="mt-5 text-sm font-bold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-300">
+                Active competitor
+              </p>
+              <h2 className="mt-2 text-3xl font-black">{activeCompetitor.full_name}</h2>
+              <p className="mt-2 max-w-md text-slate-500 dark:text-slate-400">{activeCompetitor.presentation_title}</p>
+              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                {[activeCompetitor.competitor_code, activeCompetitor.student_id].filter(Boolean).join(' | ')}
+              </p>
+            </div>
+          ) : (
+            <div className="text-center">
               <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-300">
                 Active competitor
               </p>
-              <h2 className="mt-3 text-3xl font-black">{activeCompetitor?.full_name ?? 'No active speaker'}</h2>
-              <p className="mt-2 text-slate-500 dark:text-slate-400">
-                {activeCompetitor?.presentation_title ?? 'Wait for the admin to open voting.'}
-              </p>
-              {activeCompetitor && (
-                <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  {[activeCompetitor.competitor_code, activeCompetitor.student_id].filter(Boolean).join(' | ')}
-                </p>
-              )}
-              </div>
+              <h2 className="mt-3 text-3xl font-black">No active speaker</h2>
+              <p className="mt-2 text-slate-500 dark:text-slate-400">Wait for the admin to open voting.</p>
             </div>
+          )}
+
+          <div className="mt-6 flex justify-end">
             <Radio className={status.voting_open ? 'text-emerald-500' : 'text-slate-400'} />
           </div>
 
