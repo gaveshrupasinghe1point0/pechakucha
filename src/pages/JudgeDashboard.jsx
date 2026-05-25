@@ -70,12 +70,12 @@ export default function JudgeDashboard() {
           <div className="divide-y divide-slate-200/70 dark:divide-white/10">
             {competitors.map((competitor) => (
               <div key={competitor.id} className="grid gap-4 p-5 md:grid-cols-[1fr_10rem_8rem] md:items-center">
-                <div className="flex items-start gap-3">
+                <div className="flex items-center gap-4">
                   <img
-                    className="h-14 w-14 rounded-2xl object-cover ring-1 ring-slate-200 dark:ring-white/10"
+                    className="h-32 w-32 rounded-3xl object-cover ring-2 ring-slate-200 dark:ring-white/10 md:h-36 md:w-36"
                     src={
                       competitor.profile_image_url ||
-                      `https://ui-avatars.com/api/?name=${encodeURIComponent(competitor.full_name)}&background=16a34a&color=fff`
+                      `https://ui-avatars.com/api/?name=${encodeURIComponent(competitor.full_name)}&background=16a34a&color=fff&size=512`
                     }
                     alt={competitor.full_name}
                   />
