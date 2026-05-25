@@ -396,10 +396,10 @@ export default function AdminDashboard() {
               <div key={competitor.id} className="p-5">
                 <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-4">
                     <img
-                      className="h-20 w-20 rounded-3xl object-cover ring-2 ring-slate-200 dark:ring-white/10"
-                      src={competitor.profile_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(competitor.full_name)}&background=16a34a&color=fff`}
+                      className="h-32 w-32 rounded-3xl object-cover ring-2 ring-slate-200 dark:ring-white/10 md:h-36 md:w-36"
+                      src={competitor.profile_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(competitor.full_name)}&background=16a34a&color=fff&size=512`}
                       alt={competitor.full_name}
                     />
                     <div>
