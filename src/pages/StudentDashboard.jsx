@@ -3,17 +3,16 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import PageShell from '../components/PageShell';
 import CountdownBadge from '../components/CountdownBadge';
-import Leaderboard from '../components/Leaderboard';
-import StatCard from '../components/StatCard';
 import { useAuth } from '../hooks/useAuth';
 import { useCompetitors } from '../hooks/useCompetitors';
 import { useCompetitionStatus } from '../hooks/useCompetitionStatus';
 import { useCountdown } from '../hooks/useCountdown';
+import { competitorAvatarUrl } from '../lib/competitorAvatar';
 import { supabase } from '../lib/supabase';
 
 export default function StudentDashboard() {
   const { user, profile } = useAuth();
-  const { competitors, activeCompetitor } = useCompetitors();
+  const { activeCompetitor } = useCompetitors();
   const { status, votingEndsAt } = useCompetitionStatus();
   const { isExpired } = useCountdown(votingEndsAt);
   const [hasVoted, setHasVoted] = useState(false);
@@ -55,7 +54,7 @@ export default function StudentDashboard() {
     }
 
     setHasVoted(true);
-    toast.success('Vote recorded instantly.');
+    toast.success('Vote recorded!');
   }
 
   const canVote = status.voting_open && activeCompetitor && !hasVoted && !isExpired;
@@ -72,66 +71,59 @@ export default function StudentDashboard() {
         <CountdownBadge open={status.voting_open} endDate={votingEndsAt} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <section className="glass-card p-6">
-          {activeCompetitor ? (
-            <div className="flex flex-col items-center text-center">
-              <img
-                className="h-44 w-44 rounded-3xl object-cover ring-4 ring-emerald-500/30 sm:h-52 sm:w-52"
-                src={
-                  activeCompetitor.profile_image_url ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(activeCompetitor.full_name)}&background=16a34a&color=fff&size=512`
-                }
-                alt={activeCompetitor.full_name}
-              />
-              <p className="mt-5 text-sm font-bold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-300">
-                Active competitor
-              </p>
-              <h2 className="mt-2 text-3xl font-black">{activeCompetitor.full_name}</h2>
-              <p className="mt-2 max-w-md text-slate-500 dark:text-slate-400">{activeCompetitor.presentation_title}</p>
-              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                {[activeCompetitor.competitor_code, activeCompetitor.student_id].filter(Boolean).join(' | ')}
-              </p>
-            </div>
-          ) : (
-            <div className="text-center">
-              <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-300">
-                Active competitor
-              </p>
-              <h2 className="mt-3 text-3xl font-black">No active speaker</h2>
-              <p className="mt-2 text-slate-500 dark:text-slate-400">Wait for the admin to open voting.</p>
-            </div>
-          )}
-
-          <div className="mt-6 flex justify-end">
-            <Radio className={status.voting_open ? 'text-emerald-500' : 'text-slate-400'} />
+      <section className="glass-card mx-auto max-w-xl p-6 sm:p-8">
+        {activeCompetitor && status.voting_open ? (
+          <div className="flex flex-col items-center text-center">
+            <img
+              className="h-44 w-44 rounded-3xl object-cover ring-4 ring-emerald-500/30 sm:h-52 sm:w-52"
+              src={competitorAvatarUrl(activeCompetitor, 512)}
+              alt={activeCompetitor.full_name}
+            />
+            <p className="mt-5 text-sm font-bold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-300">
+              Now presenting
+            </p>
+            <h2 className="mt-2 text-3xl font-black">{activeCompetitor.full_name}</h2>
+            <p className="mt-2 max-w-md text-slate-500 dark:text-slate-400">
+              {activeCompetitor.presentation_title}
+            </p>
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              {[activeCompetitor.competitor_code, activeCompetitor.student_id].filter(Boolean).join(' | ')}
+            </p>
           </div>
+        ) : (
+          <div className="py-8 text-center">
+            <Radio className="mx-auto text-slate-400" size={40} />
+            <p className="mt-5 text-sm font-bold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-300">
+              Waiting for next speaker
+            </p>
+            <h2 className="mt-3 text-2xl font-black">Voting is not open yet</h2>
+            <p className="mt-2 text-slate-500 dark:text-slate-400">
+              When a competitor starts presenting, they will appear here for you to vote.
+            </p>
+          </div>
+        )}
 
-          <button className="btn-primary mt-8 w-full text-lg" disabled={!canVote || submitting} onClick={submitVote}>
-            {hasVoted ? (
-              <>
-                <CheckCircle2 size={22} /> Vote confirmed
-              </>
-            ) : (
-              <>
-                <Vote size={22} /> {submitting ? 'Submitting...' : 'Vote for this competitor'}
-              </>
+        {activeCompetitor && status.voting_open && (
+          <>
+            <button className="btn-primary mt-8 w-full text-lg" disabled={!canVote || submitting} onClick={submitVote}>
+              {hasVoted ? (
+                <>
+                  <CheckCircle2 size={22} /> Vote confirmed
+                </>
+              ) : (
+                <>
+                  <Vote size={22} /> {submitting ? 'Submitting...' : 'Vote for this competitor'}
+                </>
+              )}
+            </button>
+            {hasVoted && (
+              <p className="mt-4 text-center text-sm text-emerald-600 dark:text-emerald-300">
+                Thanks! Winners will be revealed at the end of the competition.
+              </p>
             )}
-          </button>
-          <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
-            Database RLS and a unique constraint prevent duplicate or unauthorized voting.
-          </p>
-        </section>
-
-        <div className="grid gap-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard label="My status" value={hasVoted ? 'Voted' : 'Ready'} icon={CheckCircle2} tone="emerald" />
-            <StatCard label="Live votes" value={activeCompetitor?.vote_count ?? 0} icon={Vote} />
-            <StatCard label="Competitors" value={competitors.length} icon={Radio} tone="amber" />
-          </div>
-          <Leaderboard competitors={competitors} highlightId={activeCompetitor?.id} />
-        </div>
-      </div>
+          </>
+        )}
+      </section>
     </PageShell>
   );
 }
