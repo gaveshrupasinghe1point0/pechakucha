@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 const defaultStatus = {
@@ -8,10 +8,13 @@ const defaultStatus = {
   active_competitor_id: null,
   voting_duration_seconds: 30,
   voting_started_at: null,
+  winners_page_enabled: false,
   updated_at: null,
 };
 
-export function useCompetitionStatus() {
+const CompetitionStatusContext = createContext(null);
+
+export function CompetitionStatusProvider({ children }) {
   const [status, setStatus] = useState(defaultStatus);
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +25,9 @@ export function useCompetitionStatus() {
       .eq('id', 1)
       .maybeSingle();
 
-    if (!error && data) setStatus(data);
+    if (!error && data) {
+      setStatus((current) => ({ ...defaultStatus, ...current, ...data }));
+    }
     setLoading(false);
   }, []);
 
@@ -34,7 +39,11 @@ export function useCompetitionStatus() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'competition_status' },
-        (payload) => setStatus(payload.new ?? defaultStatus),
+        (payload) => {
+          if (payload.new) {
+            setStatus((current) => ({ ...defaultStatus, ...current, ...payload.new }));
+          }
+        },
       )
       .subscribe();
 
@@ -49,5 +58,18 @@ export function useCompetitionStatus() {
     return new Date(startedAt + status.voting_duration_seconds * 1000);
   }, [status.voting_duration_seconds, status.voting_started_at]);
 
-  return { status, votingEndsAt, loading, reload: loadStatus };
+  const value = useMemo(
+    () => ({ status, votingEndsAt, loading, reload: loadStatus }),
+    [loadStatus, loading, status, votingEndsAt],
+  );
+
+  return createElement(CompetitionStatusContext.Provider, { value }, children);
+}
+
+export function useCompetitionStatus() {
+  const context = useContext(CompetitionStatusContext);
+  if (!context) {
+    throw new Error('useCompetitionStatus must be used within CompetitionStatusProvider');
+  }
+  return context;
 }
