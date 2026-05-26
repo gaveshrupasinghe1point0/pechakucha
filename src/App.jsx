@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
+import { CompetitionStatusProvider } from './hooks/useCompetitionStatus';
+import { CompetitorsProvider } from './hooks/useCompetitors';
 import { ROLES } from './lib/constants';
 import RoleGate from './components/RoleGate';
 import Landing from './pages/Landing';
@@ -10,18 +12,21 @@ import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import StudentDashboard from './pages/StudentDashboard';
-import JudgeDashboard from './pages/JudgeDashboard';
-import CompetitorDashboard from './pages/CompetitorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import VoterActivity from './pages/VoterActivity';
 import UserDirectory from './pages/UserDirectory';
 import LeaderboardPage from './pages/LeaderboardPage';
+import WinnersPage from './pages/WinnersPage';
 import Join from './pages/Join';
+import WinnersAutoReveal from './components/WinnersAutoReveal';
 
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
+      <CompetitionStatusProvider>
+        <CompetitorsProvider>
+          <WinnersAutoReveal />
+          <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin-login" element={<AdminLogin />} />
@@ -36,32 +41,13 @@ export default function App() {
             />
           }
         />
-        <Route
-          path="/judge-login"
-          element={
-            <RoleLogin
-              role={ROLES.JUDGE}
-              title="Judge login"
-              subtitle="Lecturers and judges can score using @nsbm.ac.lk accounts."
-              placeholder="name@nsbm.ac.lk"
-            />
-          }
-        />
-        <Route
-          path="/competitor-login"
-          element={
-            <RoleLogin
-              role={ROLES.COMPETITOR}
-              title="Competitor login"
-              subtitle="Competitors can view their profile and live results."
-              placeholder="competitor@students.nsbm.ac.lk"
-            />
-          }
-        />
+        <Route path="/judge-login" element={<Navigate to="/login" replace />} />
+        <Route path="/competitor-login" element={<Navigate to="/login" replace />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/winners" element={<WinnersPage />} />
         <Route path="/join" element={<Join />} />
         <Route
           path="/voter"
@@ -71,22 +57,8 @@ export default function App() {
             </RoleGate>
           }
         />
-        <Route
-          path="/judge"
-          element={
-            <RoleGate allow={[ROLES.JUDGE]}>
-              <JudgeDashboard />
-            </RoleGate>
-          }
-        />
-        <Route
-          path="/competitor"
-          element={
-            <RoleGate allow={[ROLES.COMPETITOR]}>
-              <CompetitorDashboard />
-            </RoleGate>
-          }
-        />
+        <Route path="/judge" element={<Navigate to="/login" replace />} />
+        <Route path="/competitor" element={<Navigate to="/login" replace />} />
         <Route
           path="/admin"
           element={
@@ -113,7 +85,9 @@ export default function App() {
         />
         <Route path="/student" element={<Navigate to="/voter" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          </Routes>
+        </CompetitorsProvider>
+      </CompetitionStatusProvider>
     </AuthProvider>
   );
 }
