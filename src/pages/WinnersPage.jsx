@@ -74,22 +74,8 @@ export default function WinnersPage() {
           <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
             {[winner.competitor_code, winner.student_id].filter(Boolean).join(' | ')}
           </p>
-
-          <div className="mt-8 flex justify-center gap-4">
-            <ScoreChip label="Votes" value={winner.vote_count} />
-            <ScoreChip label="Judge" value={Number(winner.judge_score).toFixed(1)} />
-          </div>
         </div>
       </div>
     </PageShell>
-  );
-}
-
-function ScoreChip({ label, value }) {
-  return (
-    <div className="rounded-2xl bg-white/80 px-4 py-3 dark:bg-white/10">
-      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="text-xl font-black">{value}</p>
-    </div>
   );
 }
