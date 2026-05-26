@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 const competitorSelect =
   'id,profile_id,competitor_code,student_id,full_name,presentation_title,profile_image_url,vote_count,judge_score,is_active,created_at';
 
-export function useCompetitors({ realtime = true } = {}) {
+const CompetitorsContext = createContext(null);
+
+export function CompetitorsProvider({ children, realtime = true }) {
   const [competitors, setCompetitors] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,5 +44,18 @@ export function useCompetitors({ realtime = true } = {}) {
     [competitors],
   );
 
-  return { competitors, activeCompetitor, loading, reload: loadCompetitors };
+  const value = useMemo(
+    () => ({ competitors, activeCompetitor, loading, reload: loadCompetitors }),
+    [activeCompetitor, competitors, loadCompetitors, loading],
+  );
+
+  return createElement(CompetitorsContext.Provider, { value }, children);
+}
+
+export function useCompetitors() {
+  const context = useContext(CompetitorsContext);
+  if (!context) {
+    throw new Error('useCompetitors must be used within CompetitorsProvider');
+  }
+  return context;
 }
