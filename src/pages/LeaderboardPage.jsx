@@ -1,17 +1,25 @@
 import { Activity, Users, Vote } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
 import PageShell from '../components/PageShell';
 import Leaderboard from '../components/Leaderboard';
 import CountdownBadge from '../components/CountdownBadge';
 import StatCard from '../components/StatCard';
+import { useAuth } from '../hooks/useAuth';
 import { useCompetitors } from '../hooks/useCompetitors';
 import { useCompetitionStatus } from '../hooks/useCompetitionStatus';
 import { usePresence } from '../hooks/usePresence';
+import { ROLES } from '../lib/constants';
 
 export default function LeaderboardPage() {
+  const { profile } = useAuth();
   const { competitors, activeCompetitor } = useCompetitors();
   const { status, votingEndsAt } = useCompetitionStatus();
   const onlineCount = usePresence('leaderboard');
   const totalVotes = competitors.reduce((sum, competitor) => sum + competitor.vote_count, 0);
+
+  if (profile?.role === ROLES.VOTER) {
+    return <Navigate to="/voter" replace />;
+  }
 
   return (
     <PageShell>
