@@ -12,52 +12,62 @@ import { supabase } from '../lib/supabase';
 
 export default function StudentDashboard() {
   const { user, profile } = useAuth();
-  const { activeCompetitor } = useCompetitors();
+  const { competitors } = useCompetitors();
   const { status, votingEndsAt } = useCompetitionStatus();
   const { isExpired } = useCountdown(votingEndsAt);
-  const [hasVoted, setHasVoted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [votedCompetitorId, setVotedCompetitorId] = useState(null);
+  const [submittingId, setSubmittingId] = useState(null);
 
   useEffect(() => {
     async function checkVote() {
-      if (!activeCompetitor || !user) {
-        setHasVoted(false);
+      if (!user) {
+        setVotedCompetitorId(null);
         return;
       }
 
       const { data } = await supabase
         .from('votes')
-        .select('id')
+        .select('competitor_id')
         .eq('voter_id', user.id)
-        .eq('competitor_id', activeCompetitor.id)
         .maybeSingle();
 
-      setHasVoted(Boolean(data));
+      setVotedCompetitorId(data?.competitor_id ?? null);
     }
 
     checkVote();
-  }, [activeCompetitor, user]);
+  }, [user]);
 
-  async function submitVote() {
-    if (!activeCompetitor) return;
-    setSubmitting(true);
+  async function submitVote(competitorId) {
+    if (votedCompetitorId || !status.voting_open || isExpired) return;
+
+    setSubmittingId(competitorId);
     const { error } = await supabase.from('votes').insert({
       voter_id: user.id,
-      competitor_id: activeCompetitor.id,
+      competitor_id: competitorId,
     });
-    setSubmitting(false);
+    setSubmittingId(null);
 
     if (error) {
-      toast.error(error.code === '23505' ? 'You already voted for this competitor.' : error.message);
-      setHasVoted(true);
+      if (error.code === '23505') {
+        toast.error('You already used your vote. Each person can only vote once.');
+        const { data } = await supabase
+          .from('votes')
+          .select('competitor_id')
+          .eq('voter_id', user.id)
+          .maybeSingle();
+        setVotedCompetitorId(data?.competitor_id ?? null);
+      } else {
+        toast.error(error.message);
+      }
       return;
     }
 
-    setHasVoted(true);
+    setVotedCompetitorId(competitorId);
     toast.success('Vote recorded!');
   }
 
-  const canVote = status.voting_open && activeCompetitor && !hasVoted && !isExpired;
+  const votingOpen = status.voting_open && !isExpired;
+  const hasVoted = Boolean(votedCompetitorId);
 
   return (
     <PageShell>
@@ -67,63 +77,91 @@ export default function StudentDashboard() {
             Voting dashboard
           </p>
           <h1 className="mt-2 text-4xl font-black">Welcome, {profile.full_name}</h1>
+          <p className="mt-2 text-slate-500 dark:text-slate-400">
+            {hasVoted
+              ? 'Your vote is locked in. Winners will be revealed at the end.'
+              : votingOpen
+                ? 'Pick one competitor — you only get one vote.'
+                : 'Voting opens after all presentations are finished.'}
+          </p>
         </div>
         <CountdownBadge open={status.voting_open} endDate={votingEndsAt} />
       </div>
 
-      <section className="glass-card mx-auto max-w-xl p-6 sm:p-8">
-        {activeCompetitor && status.voting_open ? (
-          <div className="flex flex-col items-center text-center">
-            <img
-              className="h-44 w-44 rounded-3xl object-cover ring-4 ring-emerald-500/30 sm:h-52 sm:w-52"
-              src={competitorAvatarUrl(activeCompetitor, 512)}
-              alt={activeCompetitor.full_name}
-            />
-            <p className="mt-5 text-sm font-bold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-300">
-              Now presenting
-            </p>
-            <h2 className="mt-2 text-3xl font-black">{activeCompetitor.full_name}</h2>
-            <p className="mt-2 max-w-md text-slate-500 dark:text-slate-400">
-              {activeCompetitor.presentation_title}
-            </p>
-            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              {[activeCompetitor.competitor_code, activeCompetitor.student_id].filter(Boolean).join(' | ')}
-            </p>
-          </div>
-        ) : (
-          <div className="py-8 text-center">
-            <Radio className="mx-auto text-slate-400" size={40} />
-            <p className="mt-5 text-sm font-bold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-300">
-              Waiting for next speaker
-            </p>
-            <h2 className="mt-3 text-2xl font-black">Voting is not open yet</h2>
-            <p className="mt-2 text-slate-500 dark:text-slate-400">
-              When a competitor starts presenting, they will appear here for you to vote.
-            </p>
-          </div>
-        )}
+      {!votingOpen && !hasVoted ? (
+        <section className="glass-card mx-auto max-w-xl p-8 text-center">
+          <Radio className="mx-auto text-slate-400" size={40} />
+          <p className="mt-5 text-sm font-bold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-300">
+            Waiting for voting
+          </p>
+          <h2 className="mt-3 text-2xl font-black">
+            {status.voting_open && isExpired ? 'Voting time is over' : 'Voting is not open yet'}
+          </h2>
+          <p className="mt-2 text-slate-500 dark:text-slate-400">
+            When the admin opens voting, all competitors will appear here and you can choose one.
+          </p>
+        </section>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {competitors.map((competitor) => {
+            const isSelected = votedCompetitorId === competitor.id;
+            const isSubmitting = submittingId === competitor.id;
+            const canVote = votingOpen && !hasVoted;
 
-        {activeCompetitor && status.voting_open && (
-          <>
-            <button className="btn-primary mt-8 w-full text-lg" disabled={!canVote || submitting} onClick={submitVote}>
-              {hasVoted ? (
-                <>
-                  <CheckCircle2 size={22} /> Vote confirmed
-                </>
-              ) : (
-                <>
-                  <Vote size={22} /> {submitting ? 'Submitting...' : 'Vote for this competitor'}
-                </>
-              )}
-            </button>
-            {hasVoted && (
-              <p className="mt-4 text-center text-sm text-emerald-600 dark:text-emerald-300">
-                Thanks! Winners will be revealed at the end of the competition.
-              </p>
-            )}
-          </>
-        )}
-      </section>
+            return (
+              <article
+                key={competitor.id}
+                className={`glass-card flex flex-col p-5 transition ${
+                  isSelected ? 'ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-950' : ''
+                }`}
+              >
+                <div className="flex flex-col items-center text-center">
+                  <img
+                    className="h-36 w-36 rounded-3xl object-cover ring-2 ring-slate-200 dark:ring-white/10 sm:h-40 sm:w-40"
+                    src={competitorAvatarUrl(competitor, 512)}
+                    alt={competitor.full_name}
+                  />
+                  <h2 className="mt-4 text-xl font-black">{competitor.full_name}</h2>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    {competitor.presentation_title}
+                  </p>
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    {[competitor.competitor_code, competitor.student_id].filter(Boolean).join(' | ')}
+                  </p>
+                </div>
+
+                <button
+                  className={`mt-5 w-full ${isSelected ? 'btn-secondary' : 'btn-primary'}`}
+                  disabled={!canVote && !isSelected}
+                  onClick={() => submitVote(competitor.id)}
+                >
+                  {isSelected ? (
+                    <>
+                      <CheckCircle2 size={20} /> Your vote
+                    </>
+                  ) : isSubmitting ? (
+                    'Submitting...'
+                  ) : canVote ? (
+                    <>
+                      <Vote size={20} /> Vote for this competitor
+                    </>
+                  ) : hasVoted ? (
+                    'Vote used'
+                  ) : (
+                    'Voting closed'
+                  )}
+                </button>
+              </article>
+            );
+          })}
+
+          {competitors.length === 0 && (
+            <div className="glass-card col-span-full p-8 text-center text-slate-500 dark:text-slate-400">
+              No competitors have been added yet.
+            </div>
+          )}
+        </div>
+      )}
     </PageShell>
   );
 }
