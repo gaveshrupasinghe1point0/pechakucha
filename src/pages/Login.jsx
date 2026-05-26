@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom';
-import { GraduationCap, Mic2, ShieldCheck, Vote } from 'lucide-react';
+import { ShieldCheck, Vote } from 'lucide-react';
 import AuthCard from '../components/AuthCard';
 
 export default function Login() {
   return (
     <AuthCard
       title="Choose login type"
-      subtitle="Select the correct portal for your role in the PechaKucha competition."
+      subtitle="Students vote here. Admins control the competition."
       footer={
         <>
           New here? <Link className="font-bold text-brand-600" to="/signup">Create account</Link>
@@ -21,22 +21,10 @@ export default function Login() {
           text="Competition control panel with 5-character admin code."
         />
         <LoginChoice
-          to="/judge-login"
-          icon={GraduationCap}
-          title="Judge Login"
-          text="Lecturer scoring panel for @nsbm.ac.lk accounts."
-        />
-        <LoginChoice
           to="/voter-login"
           icon={Vote}
           title="Voter Login"
           text="Student voting dashboard for @students.nsbm.ac.lk accounts."
-        />
-        <LoginChoice
-          to="/competitor-login"
-          icon={Mic2}
-          title="Competitor Login"
-          text="Competitor profile and live result dashboard."
         />
       </div>
       <div className="mt-5 rounded-2xl border border-brand-200 bg-brand-50 p-4 text-sm dark:border-white/10 dark:bg-white/10">
