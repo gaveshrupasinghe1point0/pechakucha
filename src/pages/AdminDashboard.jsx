@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+\import { Link } from 'react-router-dom';
 import {
   Activity,
   Clock,
@@ -31,13 +31,14 @@ function splitDuration(totalSeconds = 30) {
 }
 
 export default function AdminDashboard() {
-  const { competitors, activeCompetitor, reload } = useCompetitors();
+  const { competitors, reload } = useCompetitors();
   const { status, votingEndsAt } = useCompetitionStatus();
   const onlineCount = usePresence('admin-monitor');
   const [duration, setDuration] = useState(() => splitDuration(status.voting_duration_seconds ?? 30));
   const [savingId, setSavingId] = useState(null);
   const [creating, setCreating] = useState(false);
   const [endingCompetition, setEndingCompetition] = useState(false);
+  const [openingVoting, setOpeningVoting] = useState(false);
   const [competitorForm, setCompetitorForm] = useState({
     competitorCode: '',
     studentId: '',
@@ -51,19 +52,35 @@ export default function AdminDashboard() {
     [competitors],
   );
 
-  async function activateCompetitor(competitorId) {
-    setSavingId(competitorId);
+  async function openVotingForAll() {
+    if (competitors.length === 0) {
+      toast.error('Add at least one competitor before opening voting.');
+      return;
+    }
+
+    if (status.voting_open) {
+      toast.error('Voting is already open.');
+      return;
+    }
+
+    setOpeningVoting(true);
+
+    await supabase.from('competitors').update({ is_active: false }).eq('is_active', true);
+
     const { error } = await supabase
-      .from('competitors')
-      .update({ is_active: true })
-      .eq('id', competitorId);
-    setSavingId(null);
+      .from('competition_status')
+      .update({
+        voting_open: true,
+        voting_started_at: new Date().toISOString(),
+        active_competitor_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', 1);
+
+    setOpeningVoting(false);
 
     if (error) toast.error(error.message);
-    else {
-      toast.success('Voting enabled for this competitor.');
-      reload();
-    }
+    else toast.success('Voting is now open for all competitors.');
   }
 
   async function closeVoting() {
@@ -84,7 +101,7 @@ export default function AdminDashboard() {
 
     setSavingId(competitor.id);
 
-    if (competitor.is_active) {
+    if (status.voting_open) {
       await supabase
         .from('competition_status')
         .update({ voting_open: false, active_competitor_id: null, updated_at: new Date().toISOString() })
@@ -272,7 +289,7 @@ export default function AdminDashboard() {
       <div className="mb-6 grid gap-4 md:grid-cols-4">
         <StatCard label="Online users" value={onlineCount} icon={Users} tone="emerald" />
         <StatCard label="Total votes" value={totalVotes} icon={Vote} />
-        <StatCard label="Active speaker" value={activeCompetitor ? '1' : '0'} icon={RadioTower} tone="amber" />
+        <StatCard label="Competitors" value={competitors.length} icon={RadioTower} tone="amber" />
         <StatCard label="Status" value={status.winners_page_enabled ? 'Finished' : status.voting_open ? 'Open' : 'Closed'} icon={Activity} />
       </div>
 
@@ -344,11 +361,22 @@ export default function AdminDashboard() {
 
           <section className="glass-card overflow-hidden">
           <div className="border-b border-slate-200/70 p-5 dark:border-white/10">
-            <h2 className="text-2xl font-black">Presentation voting controls</h2>
+            <h2 className="text-2xl font-black">Final voting controls</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              When a competitor starts presenting, enable voting for that competitor. The database
-              automatically closes voting for everyone else and starts the timer.
+              After all presentations are done, open voting once. Every voter sees all competitors and
+              picks one favorite before the timer runs out.
             </p>
+          </div>
+
+          <div className="border-b border-slate-200/70 p-5 dark:border-white/10">
+            <button
+              className="btn-primary w-full"
+              disabled={openingVoting || status.voting_open || competitors.length === 0}
+              onClick={openVotingForAll}
+            >
+              <RadioTower size={18} />
+              {openingVoting ? 'Opening voting...' : status.voting_open ? 'Voting is open' : 'Open voting for all competitors'}
+            </button>
           </div>
 
           <div className="border-b border-slate-200/70 p-5 dark:border-white/10">
@@ -412,14 +440,6 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      className={competitor.is_active ? 'btn-secondary' : 'btn-primary'}
-                      disabled={savingId === competitor.id}
-                      onClick={() => activateCompetitor(competitor.id)}
-                    >
-                      <RadioTower size={18} />
-                      {competitor.is_active ? 'Voting enabled now' : 'Enable voting'}
-                    </button>
-                    <button
                       className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 py-3 font-semibold text-rose-600 transition hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/20 dark:bg-white/10 dark:text-rose-300 dark:hover:bg-rose-500/10"
                       disabled={savingId === competitor.id}
                       onClick={() => removeCompetitor(competitor)}
@@ -437,11 +457,6 @@ export default function AdminDashboard() {
                     value={Number(competitor.judge_score).toFixed(1)}
                   />
                 </div>
-                {competitor.is_active && (
-                  <div className="rounded-2xl bg-emerald-500/10 p-3 text-sm font-semibold text-emerald-700 dark:text-emerald-200">
-                    Voters can vote for this competitor now until the countdown ends.
-                  </div>
-                )}
                 </div>
               </div>
             ))}
@@ -465,7 +480,7 @@ export default function AdminDashboard() {
           </section>
         </div>
 
-        <Leaderboard competitors={competitors} highlightId={activeCompetitor?.id} />
+        <Leaderboard competitors={competitors} />
       </div>
     </PageShell>
   );
