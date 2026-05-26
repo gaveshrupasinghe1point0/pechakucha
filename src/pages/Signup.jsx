@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
-import { STAFF_DOMAIN, STUDENT_DOMAIN } from '../lib/constants';
+import { STUDENT_DOMAIN } from '../lib/constants';
 import AuthCard from '../components/AuthCard';
 
 export default function Signup() {
@@ -13,14 +13,13 @@ export default function Signup() {
   const isStudentEmail = form.email.toLowerCase().trim().endsWith(STUDENT_DOMAIN);
 
   function isAllowedEmail(email) {
-    const normalized = email.toLowerCase().trim();
-    return normalized.endsWith(STUDENT_DOMAIN) || normalized.endsWith(STAFF_DOMAIN);
+    return email.toLowerCase().trim().endsWith(STUDENT_DOMAIN);
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
     if (!isAllowedEmail(form.email)) {
-      toast.error(`Use ${STUDENT_DOMAIN} or ${STAFF_DOMAIN}`);
+      toast.error(`Use a ${STUDENT_DOMAIN} email address.`);
       return;
     }
 
@@ -30,33 +29,44 @@ export default function Signup() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/login`,
-        data: {
-          full_name: form.fullName,
-          student_id: isStudentEmail ? form.studentId.trim().toUpperCase() : null,
+    try {
+      const signUpPromise = supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+          data: {
+            full_name: form.fullName,
+            student_id: isStudentEmail ? form.studentId.trim().toUpperCase() : null,
+          },
         },
-      },
-    });
-    setLoading(false);
+      });
 
-    if (error) {
-      toast.error(error.message);
-      return;
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Signup timed out. Check Supabase SMTP settings or try again.')), 30000);
+      });
+
+      const { error } = await Promise.race([signUpPromise, timeoutPromise]);
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      toast.success('Account created successfully. Confirm your email and login.');
+      setForm({ fullName: '', email: '', studentId: '', password: '' });
+      navigate('/login');
+    } catch (err) {
+      toast.error(err.message || 'Signup failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    toast.success('Account created successfully. Confirm your email and login.');
-    setForm({ fullName: '', email: '', studentId: '', password: '' });
-    navigate('/login');
   }
 
   return (
     <AuthCard
       title="Create account"
-      subtitle="Students become voters automatically. Staff accounts become judges by default."
+      subtitle="Students sign up with their NSBM student email to vote in the competition."
       footer={
         <>
           Already registered? <Link className="font-bold text-brand-600" to="/login">Login</Link>
@@ -102,7 +112,7 @@ export default function Signup() {
         </button>
       </form>
       <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
-        Admin and competitor roles are manually assigned in Supabase after account creation.
+        Only student accounts can sign up. Admin access is assigned separately.
       </p>
     </AuthCard>
   );
